@@ -1,0 +1,4 @@
+<?xml version="1.0"?>
+<launch>=
+    <node pkg="oculus_ros" type="oculus_mobile_base_mapping.py" name="oculus_mobilebase_mapping" output="screen"/>
+</launch>
