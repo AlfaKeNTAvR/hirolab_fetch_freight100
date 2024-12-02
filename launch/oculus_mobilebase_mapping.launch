@@ -1,0 +1,69 @@
+<?xml version="1.0"?>
+<launch>
+    <!-- ============================ SETTINGS ============================= -->
+
+    <!-- Node frequency: the frequency [Hz] which rate.sleep() function will
+    attempt to maintain in the main_loop. -->
+    <arg 
+    name="node_frequency" 
+    default="100"/>
+
+    <!-- Controller side: "right" or "left". -->
+    <arg 
+    name="controller_side" 
+    default="left"/>
+
+    <!-- If any of dependency or optional subfiles should not be launched (or
+    are launched separately) set corresponding argument to "false". -->
+    <arg 
+    name="launch_controller_feedback" 
+    default="true"/>
+
+    <!-- If set to "true" enable rosbag recording of nodes' outputs. -->
+    <arg 
+    name="enable_rosbag_recording" 
+    default="false"/>
+
+    <!-- ======================== END OF SETTINGS ========================== -->
+
+
+    <!-- Oculus controller feedback (dependency): -->
+    <group if="$(arg launch_controller_feedback)">
+        <include 
+        file="$(find oculus_ros)/launch/controller_feedback.launch">
+            <arg 
+            name="controller_side" 
+            value="$(arg controller_side)"/>
+        </include>
+    </group>
+
+    <!-- Oculus mapping: -->
+    <node 
+    pkg="hirolab_fetch_freight100" 
+    type="oculus_mobilebase_mapping.py" 
+    name="oculus_mobilebase_mapping" 
+    output="screen">
+        <param 
+        name="node_frequency" 
+        value="$(arg node_frequency)"/>
+        <param 
+        name="controller_side" 
+        value="$(arg controller_side)"/>
+    </node>
+
+    <!-- Rosbag: -->
+    <group if="$(arg enable_rosbag_recording)">
+        <node 
+        pkg="rosbag" 
+        type="record" 
+        name="rosbag"
+        ns="/oculus_mobilebase_mapping"
+        output="screen"
+        args="
+        /oculus_mobilebase_mapping/is_initialized
+        /base_controller/command
+        -o $(find hirolab_fetch_freight100)/bagfiles/oculus_mobilebase_mapping/
+        ">
+        </node>    
+    </group>
+</launch>
