@@ -8,27 +8,27 @@
     name="node_frequency" 
     default="100"/>
 
-    <!-- Max forward speed: default is 0.5 [m/s]. -->
+    <!-- Max forward speed [m/s]: default is 0.5. -->
     <arg 
     name="max_forward_speed" 
     default="0.5"/>
 
-    <!-- Max backward speed: default is 0.1 [m/s]. -->
+    <!-- Max backward speed [m/s]: default is 0.1. -->
     <arg 
     name="max_backward_speed" 
     default="0.1"/>
 
-    <!-- Max linear acceleration: default is 0.4 [m/s^2]. -->
+    <!-- Max linear acceleration [m/s^2]: default is 0.4. -->
     <arg 
     name="max_linear_acceleration" 
     default="0.4"/>
 
-    <!-- Max angular speed: default is 0.5 [rad/s]. -->
+    <!-- Max angular speed [rad/s]: default is 0.5. -->
     <arg 
     name="max_angular_speed" 
     default="0.5"/>
 
-    <!-- Max angular acceleration: default is 0.5 [rad/s^2]. -->
+    <!-- Max angular acceleration [rad/s^2]: default is 0.5. -->
     <arg 
     name="max_angular_acceleration" 
     default="0.5"/>
