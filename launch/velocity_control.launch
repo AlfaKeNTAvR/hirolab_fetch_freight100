@@ -1,0 +1,68 @@
+<?xml version="1.0"?>
+<launch>
+    <!-- ============================ SETTINGS ============================= -->
+
+    <!-- Node frequency: the frequency [Hz] which rate.sleep() function will
+    attempt to maintain in the main_loop. -->
+    <arg 
+    name="node_frequency" 
+    default="100"/>
+
+    <!-- Max forward speed: default is 0.5 [m/s]. -->
+    <arg 
+    name="max_forward_speed" 
+    default="0.5"/>
+
+    <!-- Max backward speed: default is 0.1 [m/s]. -->
+    <arg 
+    name="max_backward_speed" 
+    default="0.1"/>
+
+    <!-- Max linear acceleration: default is 0.4 [m/s^2]. -->
+    <arg 
+    name="max_linear_acceleration" 
+    default="0.4"/>
+
+    <!-- Max angular speed: default is 0.5 [rad/s]. -->
+    <arg 
+    name="max_angular_speed" 
+    default="0.5"/>
+
+    <!-- Max angular acceleration: default is 0.5 [rad/s^2]. -->
+    <arg 
+    name="max_angular_acceleration" 
+    default="0.5"/>
+
+    <!-- If any of dependency or optional subfiles should not be launched (or
+    are launched separately) set corresponding argument to "false". -->
+
+    <!-- ======================== END OF SETTINGS ========================== -->
+
+
+    <!-- Velocity control: -->
+    <node 
+    pkg="hirolab_fetch_freight100" 
+    type="velocity_control.py" 
+    name="velocity_control" 
+    ns="mobile_base"
+    output="screen">
+        <param 
+        name="node_frequency" 
+        value="$(arg node_frequency)"/>
+        <param 
+        name="max_forward_speed" 
+        value="$(arg max_forward_speed)"/>
+        <param 
+        name="max_backward_speed" 
+        value="$(arg max_backward_speed)"/>
+        <param 
+        name="max_linear_acceleration" 
+        value="$(arg max_linear_acceleration)"/>
+        <param 
+        name="max_angular_speed" 
+        value="$(arg max_angular_speed)"/>
+        <param 
+        name="max_angular_acceleration" 
+        value="$(arg max_angular_acceleration)"/>
+    </node>
+</launch>
