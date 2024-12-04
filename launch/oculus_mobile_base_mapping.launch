@@ -11,7 +11,17 @@
     <!-- Controller side: "right" or "left". -->
     <arg 
     name="controller_side" 
-    default="left"/>
+    default="right"/>
+
+    <!-- Max forward speed: default is 0.5 [rad/s]. -->
+    <arg 
+    name="max_forward_speed" 
+    default="0.5"/>
+
+    <!-- Max angular speed: default is 0.5 [rad/s]. -->
+    <arg 
+    name="max_angular_speed" 
+    default="0.5"/>
 
     <!-- If any of dependency or optional subfiles should not be launched (or
     are launched separately) set corresponding argument to "false". -->
@@ -19,10 +29,9 @@
     name="launch_controller_feedback" 
     default="true"/>
 
-    <!-- If set to "true" enable rosbag recording of nodes' outputs. -->
     <arg 
-    name="enable_rosbag_recording" 
-    default="false"/>
+    name="launch_velocity_control" 
+    default="true"/>
 
     <!-- ======================== END OF SETTINGS ========================== -->
 
@@ -34,14 +43,30 @@
             <arg 
             name="controller_side" 
             value="$(arg controller_side)"/>
+            <param 
+            name="enable_joystick_deadzones" 
+            value="true"/>
+        </include>
+    </group>
+
+    <!-- Mobile base velocity control (optional): -->
+    <group if="$(arg launch_velocity_control)">
+        <include 
+        file="$(find hirolab_fetch_freight100)/launch/velocity_control.launch">
+            <param 
+            name="max_forward_speed" 
+            value="$(arg max_forward_speed)"/>
+            <param 
+            name="max_angular_speed" 
+            value="$(arg max_angular_speed)"/>
         </include>
     </group>
 
     <!-- Oculus mapping: -->
     <node 
     pkg="hirolab_fetch_freight100" 
-    type="oculus_mobilebase_mapping.py" 
-    name="oculus_mobilebase_mapping" 
+    type="oculus_mobile_base_mapping.py" 
+    name="oculus_mobile_base_mapping" 
     output="screen">
         <param 
         name="node_frequency" 
@@ -49,21 +74,11 @@
         <param 
         name="controller_side" 
         value="$(arg controller_side)"/>
+        <param 
+        name="max_forward_speed" 
+        value="$(arg max_forward_speed)"/>
+        <param 
+        name="max_angular_speed" 
+        value="$(arg max_angular_speed)"/>
     </node>
-
-    <!-- Rosbag: -->
-    <group if="$(arg enable_rosbag_recording)">
-        <node 
-        pkg="rosbag" 
-        type="record" 
-        name="rosbag"
-        ns="/oculus_mobilebase_mapping"
-        output="screen"
-        args="
-        /oculus_mobilebase_mapping/is_initialized
-        /base_controller/command
-        -o $(find hirolab_fetch_freight100)/bagfiles/oculus_mobilebase_mapping/
-        ">
-        </node>    
-    </group>
 </launch>

@@ -24,7 +24,10 @@ import numpy as np
 # # Third party libraries:
 
 # # Standart messages and services:
-from std_msgs.msg import (Bool)
+from std_msgs.msg import (
+    Bool,
+    String,
+)
 
 from geometry_msgs.msg import (Twist)
 
@@ -41,6 +44,8 @@ class OculusMobileBaseMapping:
         self,
         node_name,
         controller_side,
+        max_forward_speed,
+        max_angular_speed,
     ):
         """
         
@@ -50,23 +55,15 @@ class OculusMobileBaseMapping:
         # NOTE: By default all new class CONSTANTS should be private.
         self.__NODE_NAME = node_name
         self.__CONTROLLER_SIDE = controller_side
-        self.__LOOP_FREQUENCY = 50  # [Hz]
-        self.__LOOP_DT = 1.0 / self.__LOOP_FREQUENCY  # [s]
+
+        self.__MAX_FORWARD_SPEED = max_forward_speed
+        self.__MAX_ANGULAR_SPEED = max_angular_speed
 
         # # Public CONSTANTS:
 
         # # Private variables:
         # NOTE: By default all new class variables should be private.
         self.__oculus_joystick = ControllerJoystick()
-
-        self.__max_forward_speed = 0.5  # [m/s]
-        self.__max_backward_speed = 0.1  # [m/s]
-        self.__max_linear_acceleration = 0.25  # [m/s^2]
-
-        self.__max_angular_speed = 0.5  # [deg/s]
-        self.__max_angular_acceleration = 0.5  # [deg/s^2]
-
-        self.__out_velocity = Twist()  # Smoothed output velocity
         self.__target_velocity = Twist()
 
         self.__joystick_button_state = 0
@@ -115,9 +112,14 @@ class OculusMobileBaseMapping:
         # )
 
         # # Topic publisher:
-        self.__mobilebase_twist_velocity = rospy.Publisher(
-            '/base_controller/command',
+        self.__mobilebase_input_velocity = rospy.Publisher(
+            '/mobile_base/velocity_control/input_velocity',
             Twist,
+            queue_size=1,
+        )
+        self.__mapping_control_mode = rospy.Publisher(
+            f'{self.__NODE_NAME}/control_mode',
+            String,
             queue_size=1,
         )
 
@@ -129,10 +131,6 @@ class OculusMobileBaseMapping:
         )
 
         # # Timers:
-        rospy.Timer(
-            rospy.Duration(self.__LOOP_DT),
-            self.__loop_timer,
-        )
 
     # # Dependency status callbacks:
     # NOTE: each dependency topic should have a callback function, which will
@@ -164,13 +162,6 @@ class OculusMobileBaseMapping:
         self.__oculus_joystick = message
 
     # # Timer callbacks:
-    def __loop_timer(self, event):
-        """Calls update_velocities on each timer callback with 100 Hz frequency.
-        
-        """
-
-        self.__update_velocities()
-        self.__publish_twist_velocities()
 
     # # Private methods:
     # NOTE: By default all new class methods should be private.
@@ -265,7 +256,7 @@ class OculusMobileBaseMapping:
         elif (self.__joystick_button_state == 3 and not button):
             self.__joystick_button_state = 0
 
-    def __set_target_velocities_accelerations(self):
+    def __set_target_velocities(self):
         """
         
         """
@@ -279,12 +270,8 @@ class OculusMobileBaseMapping:
             target_linear_velocity = np.interp(
                 round(self.__oculus_joystick.position_y, 4),
                 [-1.0, 1.0],
-                [-self.__max_forward_speed, self.__max_forward_speed],
+                [-self.__MAX_FORWARD_SPEED, self.__MAX_FORWARD_SPEED],
             )
-
-            # Limit backward motion speed.
-            if (target_linear_velocity <= -self.__max_backward_speed):
-                target_linear_velocity = -self.__max_backward_speed
 
         # Set target angular velocity:
         if abs(self.__oculus_joystick.position_x) > 0.01:  # Noisy joystick.
@@ -292,106 +279,37 @@ class OculusMobileBaseMapping:
             target_angular_velocity = np.interp(
                 round(self.__oculus_joystick.position_x, 4),
                 [-1.0, 1.0],
-                [self.__max_angular_speed, -self.__max_angular_speed],
+                [self.__MAX_ANGULAR_SPEED, -self.__MAX_ANGULAR_SPEED],
             )
 
         self.__target_velocity.linear.x = target_linear_velocity
         self.__target_velocity.angular.z = target_angular_velocity
 
-    def __update_velocities(self):
-        """
-        
-        """
-
-        self.__out_velocity.linear.x = self.__update_linear_velocity(
-            self.__target_velocity.linear.x, self.__out_velocity.linear.x
-        )
-        self.__out_velocity.linear.y = self.__update_linear_velocity(
-            self.__target_velocity.linear.y, self.__out_velocity.linear.y
-        )
-        self.__out_velocity.linear.z = self.__update_linear_velocity(
-            self.__target_velocity.linear.z, self.__out_velocity.linear.z
-        )
-
-        self.__out_velocity.angular.x = self.__update_angular_velocity(
-            self.__target_velocity.angular.x, self.__out_velocity.angular.x
-        )
-        self.__out_velocity.angular.y = self.__update_angular_velocity(
-            self.__target_velocity.angular.y, self.__out_velocity.angular.y
-        )
-        self.__out_velocity.angular.z = self.__update_angular_velocity(
-            self.__target_velocity.angular.z, self.__out_velocity.angular.z
-        )
-
-        self.__max_linear_acceleration = self.__update_linear_acceleration(
-            self.__out_velocity.linear.x
-        )
-
-    def __update_linear_velocity(self, set_vel, out_vel):
-        """
-        
-        """
-
-        if out_vel < set_vel:  # If the current velocity is smaller (positive)
-            out_vel += self.__max_linear_acceleration * self.__LOOP_DT
-            if out_vel > set_vel:
-                out_vel = set_vel
-
-        else:  # If the velocity is negative
-            out_vel -= self.__max_linear_acceleration * self.__LOOP_DT
-            if out_vel < set_vel:
-                out_vel = set_vel
-
-        return out_vel
-
-    def __update_angular_velocity(self, set_vel, out_vel):
-        """
-        
-        """
-
-        if out_vel < set_vel:  # If the current velocity is smaller (positive)
-            out_vel += self.__max_angular_acceleration * self.__LOOP_DT
-            if out_vel > set_vel:
-                out_vel = set_vel
-
-        else:  # If the velocity is negative
-            out_vel -= self.__max_angular_acceleration * self.__LOOP_DT
-            if out_vel < set_vel:
-                out_vel = set_vel
-
-        return out_vel
-
-    def __update_linear_acceleration(self, current_vel):
-        """
-        
-        """
-
-        if abs(current_vel) <= 0.1:
-            out_acceleration = 0.1
-
-        elif abs(current_vel) > 0.1 and abs(current_vel) <= 0.25:
-            out_acceleration = 0.25
-
-        else:
-            out_acceleration = 0.4
-
-        return out_acceleration
-
-    def __publish_twist_velocities(self):
+    def __publish_target_velocities(self):
         """
         
         """
 
         twist_message = Twist()
-        twist_message.linear.x = self.__out_velocity.linear.x
-        twist_message.angular.z = self.__out_velocity.angular.z
+        twist_message.linear.x = self.__target_velocity.linear.x
+        twist_message.angular.z = self.__target_velocity.angular.z
 
         self.__joystick_button_state_machine(self.__oculus_joystick.button)
 
         if self.__control_mode == 'rotation':
             twist_message.linear.x = 0.0
 
-        self.__mobilebase_twist_velocity.publish(twist_message)
+        self.__mobilebase_input_velocity.publish(twist_message)
+
+    def __publish_control_mode(self):
+        """
+        
+        """
+
+        string_message = String()
+        string_message.data = self.__control_mode
+
+        self.__mapping_control_mode.publish(string_message)
 
     # # Public methods:
     # NOTE: By default all new class methods should be private.
@@ -401,7 +319,6 @@ class OculusMobileBaseMapping:
         """
 
         self.__check_initialization()
-        # self.__publish_twist_velocities()
 
         if not self.__is_initialized:
             self.__target_velocity.linear.x = 0
@@ -410,7 +327,10 @@ class OculusMobileBaseMapping:
 
         # NOTE: Add code (function calls), which has to be executed once the
         # node was successfully initialized.
-        self.__set_target_velocities_accelerations()
+        self.__set_target_velocities()
+
+        self.__publish_target_velocities()
+        self.__publish_control_mode()
 
     def node_shutdown(self):
         """
@@ -437,7 +357,7 @@ def main():
     # # Default node initialization.
     # This name is replaced when a launch file is used.
     rospy.init_node(
-        'oculus_mobilebase_mapping',
+        'oculus_mapping',
         log_level=rospy.INFO,  # rospy.DEBUG to view debug messages.
     )
 
@@ -455,10 +375,20 @@ def main():
         param_name=f'{node_name}/controller_side',
         default='left',
     )
+    max_forward_speed = rospy.get_param(
+        param_name=f'{rospy.get_name()}/max_forward_speed',
+        default=0.5,
+    )
+    max_angular_speed = rospy.get_param(
+        param_name=f'{rospy.get_name()}/max_angular_speed',
+        default=0.5,
+    )
 
     class_instance = OculusMobileBaseMapping(
         node_name=node_name,
         controller_side=controller_side,
+        max_forward_speed=max_forward_speed,
+        max_angular_speed=max_angular_speed,
     )
 
     rospy.on_shutdown(class_instance.node_shutdown)
