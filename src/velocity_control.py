@@ -74,6 +74,11 @@ class OculusMobileBaseMapping:
         self.__target_velocity = Twist()
         self.__out_velocity = Twist()  # Smoothed output velocity
 
+        self.__arm_fault_state = {
+            'right_arm': False,
+            'left_arm': False,
+        }
+
         # # Public variables:
 
         # # Initialization and dependency status topics:
@@ -120,6 +125,17 @@ class OculusMobileBaseMapping:
             self.__input_velocity_callback,
         )
 
+        rospy.Subscriber(
+            '/right_arm/fault_state',
+            Bool,
+            self.__right_arm_fault_callback,
+        )
+        rospy.Subscriber(
+            '/left_arm/fault_state',
+            Bool,
+            self.__left_arm_fault_callback,
+        )
+
         # # Timers:
         rospy.Timer(
             rospy.Duration(self.__LOOP_DT),
@@ -154,6 +170,20 @@ class OculusMobileBaseMapping:
         """
 
         self.__input_velocity = message
+
+    def __right_arm_fault_callback(self, message):
+        """Monitors /right_arm/fault_state topic.
+
+        """
+
+        self.__arm_fault_state['right_arm'] = message.data
+
+    def __left_arm_fault_callback(self, message):
+        """Monitors /left_arm/fault_state topic.
+
+        """
+
+        self.__arm_fault_state['left_arm'] = message.data
 
     # # Timer callbacks:
     def __loop_timer(self, event):
@@ -217,7 +247,11 @@ class OculusMobileBaseMapping:
             )
 
         # NOTE (optionally): Add more initialization criterea if needed.
-        if (self.__dependency_initialized):
+        if (
+            self.__dependency_initialized
+            and not self.__arm_fault_state['right_arm']
+            and not self.__arm_fault_state['left_arm']
+        ):
             if not self.__is_initialized:
                 rospy.loginfo(f'\033[92m{self.__NODE_NAME}: ready.\033[0m',)
 
@@ -228,7 +262,11 @@ class OculusMobileBaseMapping:
                 # NOTE (optionally): Add code, which needs to be executed if the
                 # nodes's status changes from True to False.
 
-                pass
+                self.__target_velocity.linear.x = 0
+                self.__target_velocity.angular.z = 0
+
+                self.__out_velocity.linear.x = 0.0
+                self.__out_velocity.angular.z = 0.0
 
             self.__is_initialized = False
 
