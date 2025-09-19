@@ -67,7 +67,7 @@ class OculusMobileBaseMapping:
         self.__target_velocity = Twist()
 
         self.__joystick_button_state = 0
-        self.__control_mode = 'full'
+        self.__control_mode = 'Full'
 
         # # Public variables:
 
@@ -240,7 +240,7 @@ class OculusMobileBaseMapping:
 
         # State 0: Joystick button was pressed. Rotation only mode.
         if (self.__joystick_button_state == 0 and button):
-            self.__control_mode = 'rotation'
+            self.__control_mode = 'Rotation'
             self.__joystick_button_state = 1
 
         # State 1: Joystick button was released.
@@ -249,7 +249,7 @@ class OculusMobileBaseMapping:
 
         # State 2: Joystick button was pressed. Normal control mode.
         if (self.__joystick_button_state == 2 and button):
-            self.__control_mode = 'full'
+            self.__control_mode = 'Full'
             self.__joystick_button_state = 3
 
         # State 3: Joystick button was released.
@@ -296,7 +296,7 @@ class OculusMobileBaseMapping:
 
         self.__joystick_button_state_machine(self.__oculus_joystick.button)
 
-        if self.__control_mode == 'rotation':
+        if self.__control_mode == 'Rotation':
             twist_message.linear.x = 0.0
 
         self.__mobilebase_input_velocity.publish(twist_message)
